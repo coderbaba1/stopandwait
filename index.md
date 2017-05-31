@@ -1,37 +1,122 @@
-## Welcome to GitHub Pages
+##CLIENT SIDE
 
-You can use the [editor on GitHub](https://github.com/coderbaba1/stopandwait/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
+import java.io.*;
+import java.net.*;
+public class Receiver019 {
+ ServerSocket reciever;
+ Socket connection = null;
+ ObjectOutputStream out;
+ ObjectInputStream in ;
+ String packet, ack, data = "";
+ int i = 0, sequence = 0;
+ Receiver019() {}
+ public void run() {
+  try {
+   BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+   reciever = new ServerSocket(2005, 10);
+   System.out.println("waiting for connection...");
+   connection = reciever.accept();
+   sequence = 0;
+   System.out.println("Connection established :");
+   out = new ObjectOutputStream(connection.getOutputStream());
+   out.flush(); in = new ObjectInputStream(connection.getInputStream());
+   out.writeObject("connected .");
+   do {
+    try {
+     packet = (String) in .readObject();
+     if (Integer.valueOf(packet.substring(0, 1)) == sequence) {
+      data += packet.substring(1);
+      sequence = (sequence == 0) ? 1 : 0;
+      System.out.println("\n\nreceiver >" + packet);
+     } else {
+      System.out.println("\n\nreceiver >" + packet + " duplicate data");
+     }
+     if (i < 3) {
+      out.writeObject(String.valueOf(sequence));
+      i++;
+     } else {
+      out.writeObject(String.valueOf((sequence + 1) % 2));
+      i = 0;
+     }
+    } catch (Exception e) {}
+   } while (!packet.equals("end"));
+   System.out.println("Data recived=" + data);
+   out.writeObject("connection ended .");
+  } catch (Exception e) {} finally {
+   try { in .close();
+    out.close();
+    reciever.close();
+   } catch (Exception e) {}
+  }
+ }
+ public static void main(String args[]) {
+  Receiver019 s = new Receiver019();
+  while (true) {
+   s.run();
+  }
+ }
+}
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
 
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/coderbaba1/stopandwait/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+##SERVER SIDE
+import java.io.*;
+import java.net.*;
+public class Sender019 {
+ Socket sender;
+ ObjectOutputStream out;
+ ObjectInputStream in ;
+ String packet, ack, str, msg;
+ int n, i = 0, sequence = 0;
+ Sender019() {}
+ public void run() {
+  try {
+   BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+   System.out.println("Waiting for Connection....");
+   sender = new Socket("localhost", 2005);
+   sequence = 0;
+   out = new ObjectOutputStream(sender.getOutputStream());
+   out.flush(); in = new ObjectInputStream(sender.getInputStream());
+   str = (String) in .readObject();
+   System.out.println("reciver > " + str);
+   System.out.println("Enter the data to send....");
+   packet = br.readLine();
+   n = packet.length();
+   do {
+    try {
+     if (i < n) {
+      msg = String.valueOf(sequence);
+      msg = msg.concat(packet.substring(i, i + 1));
+     } else if (i == n) {
+      msg = "end";
+      out.writeObject(msg);
+      break;
+     }
+     out.writeObject(msg);
+     sequence = (sequence == 0) ? 1 : 0;
+     out.flush();
+     System.out.println("data sent>" + msg);
+     ack = (String) in .readObject();
+     System.out.println("waiting for ack.....\n\n");
+     if (ack.equals(String.valueOf(sequence))) {
+      i++;
+      System.out.println("receiver > " + " packet recieved\n\n");
+     } else {
+      System.out.println("Time out resending data....\n\n");
+      sequence = (sequence == 0) ? 1 : 0;
+     }
+    } catch (Exception e) {}
+   } while (i < n + 1);
+   System.out.println("All data sent. exiting.");
+  } catch (Exception e) {}
+  finally {
+   try { in .close();
+    out.close();
+    sender.close();
+   } catch (Exception e) {}
+  }
+ }
+ public static void main(String args[]) {
+  Sender019 s = new Sender019();
+  s.run();
+ }
+}
